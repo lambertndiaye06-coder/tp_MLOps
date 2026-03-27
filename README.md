@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # TP MLOps — Prédiction d'octroi de crédit
 
 Projet MLOps complet de classification binaire pour prédire l'octroi d'un crédit bancaire à partir du dataset UCI Credit Approval (`crx.data`).
@@ -204,3 +205,15 @@ pytest .
 | A16      | Cible       | + (accordé) / - (refusé)     |
 
 > Les noms des colonnes sont anonymisés dans le dataset original pour des raisons de confidentialité.
+=======
+# Credit Approval - MLOps Project
+
+## Objectif
+Prédire l'acceptation d'un crédit à partir de variables socio-économiques.
+
+## Lancer l'entraînement
+python -m mlops_tp.train
+
+## Lancer l'API
+uvicorn mlops_tp.api:app --reload
+>>>>>>> 2d83866c9e7906f6baa1c53e716ea5e6ff178a0e

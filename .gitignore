@@ -61,9 +61,12 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+<<<<<<< HEAD
 mlflow.db
 mlruns/
 
+=======
+>>>>>>> 2d83866c9e7906f6baa1c53e716ea5e6ff178a0e
 # Flask stuff:
 instance/
 .webassets-cache

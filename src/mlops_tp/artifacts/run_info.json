@@ -1,0 +1,14 @@
+{
+    "dataset": "credit_approval/crx.data",
+    "shape": {
+        "lignes": 690,
+        "colonnes": 16
+    },
+    "cible": "A16",
+    "split": {
+        "train": 0.7,
+        "test": 0.15,
+        "validation": 0.15
+    },
+    "random_state": 42
+}
