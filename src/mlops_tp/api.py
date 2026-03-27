@@ -1,33 +1,27 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, field_validator
 from typing import Optional
 import pandas as pd
 import joblib
-from pathlib import Path
 import json
-from pydantic import BaseModel, field_validator
-from config import MODEL_PATH
+from config import MODEL_PATH, RUN_INFO_PATH
 
 # ─────────────────────────────────────────
 # Initialisation
 # ─────────────────────────────────────────
 
-# Description affichée dans /docs
 app = FastAPI(
     title="API de prédiction de crédit",
     description="API ML pour prédire l'approbation d'un crédit bancaire",
     version="1.0.0"
 )
 
-# Charger le pipeline sauvegardé
-#pipeline = joblib.load("/home/ndiaylam/tp_MLOps/artifacts/model.joblib")
+try:
+    pipeline = joblib.load(MODEL_PATH)
+except Exception as e:
+    pipeline = None
+    print(f"⚠️ Modèle non chargé : {e}")
 
-
-pipeline = joblib.load(MODEL_PATH)
-
-
-# Charger le run_info pour les métadonnées
-from config import RUN_INFO_PATH
 with open(RUN_INFO_PATH, "r") as f:
     run_info = json.load(f)
 
@@ -35,6 +29,7 @@ with open(RUN_INFO_PATH, "r") as f:
 # ─────────────────────────────────────────
 # Schéma des données
 # ─────────────────────────────────────────
+
 class CreditData(BaseModel):
     A1:  Optional[str]   = None
     A2:  Optional[float] = None
@@ -51,45 +46,60 @@ class CreditData(BaseModel):
     A13: str
     A14: Optional[float] = None
     A15: int
+
     @field_validator("A3", "A8", "A15")
     def must_be_positive(cls, v):
         if v < 0:
             raise ValueError("La valeur doit être positive")
         return v
 
-    @field_validator("A1")
+    @field_validator("A1", mode="before")
     def a1_valid_values(cls, v):
-        if v not in {"a", "b", None}:
+        if v is not None and v not in {"a", "b"}:
             raise ValueError("A1 doit être 'a' ou 'b'")
         return v
+
+
+# ─────────────────────────────────────────
+# Fonction de prédiction commune
+# ─────────────────────────────────────────
+
+def run_predict(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15):
+    """Logique métier partagée entre la route GET et POST."""
+    if pipeline is None:
+        raise HTTPException(status_code=503, detail="Modèle non disponible")
+
+    df = pd.DataFrame([{
+        "A1": A1, "A2": A2, "A3": A3, "A4": A4,
+        "A5": A5, "A6": A6, "A7": A7, "A8": A8,
+        "A9": A9, "A10": A10, "A11": A11,
+        "A12": A12, "A13": A13, "A14": A14, "A15": A15
+    }])
+
+    prediction = pipeline.predict(df)[0]
+    proba      = pipeline.predict_proba(df)[0][1]
+
+    return {
+        "prediction": int(prediction),
+        "label": "accordé" if prediction == 1 else "refusé",
+        "probabilité": round(float(proba), 3)
+    }
+
 
 # ─────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────
 
-@app.get("/health", summary="Vérifier l'état de l'API")
+@app.get("/health")
 def health():
-    """
-    Vérifie que l'API est vivante et que le modèle est bien chargé.
-    - **status** : ok si tout fonctionne
-    - **model_loaded** : confirme que le pipeline est chargé
-    """
     return {
-        "status": "ok",
+        "status": "ok" if pipeline is not None else "degraded",
         "model_loaded": pipeline is not None
     }
 
 
-@app.get("/metadata", summary="Métadonnées du modèle")
+@app.get("/metadata")
 def metadata():
-    """
-    Retourne les informations sur le modèle et les données attendues.
-    - **version** : version de l'API
-    - **type_tache** : classification binaire
-    - **modele** : algorithme utilisé
-    - **variables** : liste des features attendues
-    - **dataset** : informations sur le dataset d'entraînement
-    """
     return {
         "version": "1.0.0",
         "type_tache": "classification binaire",
@@ -100,21 +110,35 @@ def metadata():
     }
 
 
-@app.post("/predict", summary="Prédire l'approbation d'un crédit")
-def predict(data: CreditData):
-    """
-    Reçoit les données d'un client et retourne la prédiction.
-    - **prediction** : 0 (refusé) ou 1 (accordé)
-    - **label** : version lisible de la prédiction
-    - **probabilité** : confiance du modèle entre 0 et 1
-    """
-    df = pd.DataFrame([data.dict()])
+# ── POST /predict — usage programmatique (Streamlit, scripts, prod) ──────────
+@app.post("/predict", summary="Prédire via JSON body")
+def predict_post(data: CreditData):
+    """Envoyer les données en JSON body — usage recommandé en production."""
+    return run_predict(
+        data.A1, data.A2, data.A3, data.A4, data.A5,
+        data.A6, data.A7, data.A8, data.A9, data.A10,
+        data.A11, data.A12, data.A13, data.A14, data.A15
+    )
 
-    prediction = pipeline.predict(df)[0]
-    proba      = pipeline.predict_proba(df)[0][1]
 
-    return {
-        "prediction": int(prediction),
-        "label": "accordé" if prediction == 1 else "refusé",
-        "probabilité": round(float(proba), 3)
-    }
+# ── GET /predict — test rapide via navigateur ou URL ─────────────────────────
+@app.get("/predict", summary="Prédire via paramètres URL")
+def predict_get(
+    A1:  Optional[str]   = None,
+    A2:  Optional[float] = None,
+    A3:  float           = 0.0,
+    A4:  Optional[str]   = None,
+    A5:  Optional[str]   = None,
+    A6:  Optional[str]   = None,
+    A7:  Optional[str]   = None,
+    A8:  float           = 0.0,
+    A9:  str             = "t",
+    A10: str             = "t",
+    A11: int             = 0,
+    A12: str             = "f",
+    A13: str             = "g",
+    A14: Optional[float] = None,
+    A15: int             = 0
+):
+    """Passer les données en paramètres URL — pratique pour tester dans le navigateur."""
+    return run_predict(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15)
