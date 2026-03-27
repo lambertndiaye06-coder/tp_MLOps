@@ -1,0 +1,68 @@
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# ======================
+# Environnements virtuels
+# ======================
+venv/
+.env/
+.envrc/
+.venv/
+
+# ======================
+# Jupyter Notebook
+# ======================
+.ipynb_checkpoints/
+
+# ======================
+# MLflow
+# ======================
+mlruns/
+mlflow.db
+
+# ======================
+# Modèles & artifacts
+# ======================
+*.joblib
+*.pkl
+*.h5
+*.pt
+
+# ======================
+# Images générées (plots)
+# ======================
+*.png
+*.jpg
+*.jpeg
+
+# ======================
+# Logs
+# ======================
+*.log
+
+# ======================
+# OS files
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# VS Code / IDE
+# ======================
+.vscode/
+.idea/
+
+# ======================
+# Fichiers Windows chelous
+# ======================
+*:Zone.Identifier
