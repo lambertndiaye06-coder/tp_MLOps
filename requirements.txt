@@ -6,9 +6,7 @@ matplotlib
 seaborn
 joblib
 uvicorn
-<<<<<<< HEAD
 fastapi
 mlflow
-=======
 fastapi
->>>>>>> 2d83866c9e7906f6baa1c53e716ea5e6ff178a0e
+
